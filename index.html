@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Keyboard Tester</title>
+</head>
+
+<body>
+  <div id="app">
+    Layout
+
+    <select v-model="layout">
+      <option v-for="(layout, index) in Object.keys(layouts)" :key="index">{{ layout }}</option>
+    </select>
+
+    <div v-if="currentLayout" class="container" :style="currentLayout.container.style">
+      <div :class="['key', {
+        'already-pressed': key.alreadyPressed,
+        'hover': key.hover,
+        'disabled': key.disabled,
+      }]" v-for="(key, id) in currentLayout.keys" :key="id" :style="{ ...key.style, }">
+        {{ key.content }}
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+
+  <script>
+    new Vue({
+      el: '#app',
+
+      data: {
+        layout: 'ABNT 2',
+
+        layouts: {
+          'ABNT 2': 'abnt-2.js',
+        },
+
+        currentLayout: null,
+
+        cached: {},
+      },
+
+      mounted() {
+        const changeHover = (event, key, value) => {
+          Object.keys(this.currentLayout.keys).forEach(id => {
+            if (this.currentLayout.keys[id].keyCode === event.keyCode
+              && this.currentLayout.keys[id].location === event.location) {
+              
+              if (this.currentLayout.keys[id].code) {
+                if (this.currentLayout.keys[id].code !== event.code) {
+                  return false;
+                }
+              }
+
+              this.$set(this.currentLayout.keys[id], key, value);
+            }
+          });
+        };
+
+        window.addEventListener('keydown', event => {
+          event.preventDefault();
+          console.log('down', event.keyCode, event.which, event.location, event);
+          changeHover(event, 'alreadyPressed', true);
+          changeHover(event, 'hover', true);
+        });
+
+        window.addEventListener('keypress', event => {
+          event.preventDefault();
+        });
+
+        window.addEventListener('keyup', event => {
+          event.preventDefault();
+          changeHover(event, 'hover', false);
+        });
+
+        window.renderLayout = (layout) => {
+          this.cached[this.layout] = layout;
+          this.setCurrentLayout();
+        }
+      },
+
+      methods: {
+        setCurrentLayout() {
+          this.currentLayout = this.cached[this.layout];
+        },
+      },
+
+      watch: {
+        layout: {
+          handler(value) {
+            if (this.cached[value]) {
+              this.setCurrentLayout();
+            } else {
+              const script = document.createElement('script');
+              script.setAttribute('src', `layouts/${this.layouts[value]}`);
+              document.body.appendChild(script);
+            }
+          },
+
+          immediate: true,
+        }
+      },
+    });
+  </script>
+
+  <style>
+    .container {
+      border: 1px solid gray;
+      position: relative;
+    }
+
+    .container .key {
+      border: 1px solid gray;
+      position: absolute;
+      box-sizing: border-box;
+    }
+
+    .container .key.already-pressed {
+      background-color: purple;
+    }
+
+    .container .key.hover {
+      background-color: gray;
+    }
+
+    .container .key.disabled {
+      background-color: darkgray;
+    }
+  </style>
+</body>
+
+</html>
